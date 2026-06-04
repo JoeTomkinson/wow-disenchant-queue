@@ -5,6 +5,7 @@ local _, ns = ...
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 local function createMinimapButton()
+    -- Named globally so button-collector addons (e.g. EnhancedQoL Button Sink) can discover it
     local minimapBtn = CreateFrame("Button", "WDQ_MinimapButton", Minimap)
     minimapBtn:SetSize(32, 32)
     minimapBtn:SetFrameStrata("MEDIUM")
@@ -67,7 +68,6 @@ local function createMinimapButton()
             else
                 queueFrame:Show()
                 DisenqueueDB.showUI = true
-                ns.RebuildQueue()
             end
         end
     end)

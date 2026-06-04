@@ -170,7 +170,7 @@ local function registerSettings()
         descStr:SetText("Enable support for other professions that use the same cast-on-bag-item pattern. When enabled, Scan Bags will also find items for these professions.")
 
         -- Master toggle
-        local masterCb = CreateFrame("CheckButton", "WDQ_LesserProfsToggle", lpFrame, "InterfaceOptionsCheckButtonTemplate")
+        local masterCb = CreateFrame("CheckButton", nil, lpFrame, "InterfaceOptionsCheckButtonTemplate")
         masterCb:SetPoint("TOPLEFT", descStr, "BOTTOMLEFT", -2, -14)
         masterCb.Text:SetText("|cffffffffEnable Lesser Professions|r")
         masterCb:SetChecked(DisenqueueDB.lesserProfsEnabled)
@@ -182,13 +182,13 @@ local function registerSettings()
         subFrame:SetHeight(120)
 
         -- Prospecting checkbox
-        local prospectCb = CreateFrame("CheckButton", "WDQ_ProspectToggle", subFrame, "InterfaceOptionsCheckButtonTemplate")
+        local prospectCb = CreateFrame("CheckButton", nil, subFrame, "InterfaceOptionsCheckButtonTemplate")
         prospectCb:SetPoint("TOPLEFT", 0, 0)
         prospectCb.Text:SetText("|cffffffffProspecting|r  |cff888888(Jewelcrafting \226\128\148 ore stacks of 5+)|r")
         prospectCb:SetChecked(DisenqueueDB.prospectingEnabled)
 
         -- Milling checkbox
-        local millCb = CreateFrame("CheckButton", "WDQ_MillToggle", subFrame, "InterfaceOptionsCheckButtonTemplate")
+        local millCb = CreateFrame("CheckButton", nil, subFrame, "InterfaceOptionsCheckButtonTemplate")
         millCb:SetPoint("TOPLEFT", prospectCb, "BOTTOMLEFT", 0, -6)
         millCb.Text:SetText("|cffffffffMilling|r  |cff888888(Inscription \226\128\148 herb stacks of 5+)|r")
         millCb:SetChecked(DisenqueueDB.millingEnabled)

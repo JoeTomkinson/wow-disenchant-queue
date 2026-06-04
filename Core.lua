@@ -679,6 +679,25 @@ function ns.StartProcessing()
         chat("Cannot start while in combat.", NOTIFY_WARNINGS)
         return
     end
+
+    -- Check that the player knows the required profession spells
+    local missingModes = {}
+    local checked = {}
+    for _, entry in ipairs(queue) do
+        local mode = entry.mode or MODE_DISENCHANT
+        if not checked[mode] then
+            checked[mode] = true
+            local spellID = SPELL_IDS[mode]
+            if spellID and not IsPlayerSpell(spellID) then
+                missingModes[#missingModes + 1] = SPELL_NAMES[mode] or mode
+            end
+        end
+    end
+    if #missingModes > 0 then
+        chat(("Cannot start — you don't know: %s"):format(table.concat(missingModes, ", ")), NOTIFY_WARNINGS)
+        return
+    end
+
     ns.isProcessing = true
     lastCastSucceeded = 0
     wipe(equippedSnapshot)
@@ -953,7 +972,7 @@ end
 
 -- ─── Event Handler ───────────────────────────────────────────────────────────
 
-local eventFrame = CreateFrame("Frame", "WDQ_EventFrame")
+local eventFrame = CreateFrame("Frame")
 
 local function isTrackedSpell(spellID)
     if spellID == DISENCHANT_SPELL_ID then return true end
@@ -1085,6 +1104,7 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, ...)
                             DisenqueueDB.protectedItemIDs[entry.itemID] = { name = entry.itemName or tostring(entry.itemID), autoProtected = true }
                             chat(("|cff888888Auto-protected item %d (%s) to prevent future queueing.|r"):format(
                                 entry.itemID, entry.itemName or "Unknown"), NOTIFY_WARNINGS)
+                            C_Timer.After(0.1, function() ns.FireCallback("LOCKED_UPDATED") end)
                         end
                         C_Timer.After(0.1, function() ns.UpdateSecureButton(); ns.FireCallback("QUEUE_UPDATED") end)
                     else
@@ -1234,7 +1254,6 @@ SlashCmdList.DISENQUEUE = function(input)
             elseif command == "show" or not queueFrame:IsShown() then
                 queueFrame:Show()
                 DisenqueueDB.showUI = true
-                ns.RebuildQueue()
                 chat("UI shown.")
             else
                 queueFrame:Hide()
