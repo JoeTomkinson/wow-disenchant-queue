@@ -1,7 +1,7 @@
 local _, ns = ...
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- UI_Main.lua — Main queue window (idle + processing states)
+-- Main.lua — Main queue window (idle + processing states)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 local C = ns.C

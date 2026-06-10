@@ -4,7 +4,14 @@ local ADDON_NAME, ns = ...
 -- Core.lua — Data model, queue logic, secure action, event handling, slash commands
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-ns.ADDON_VERSION = "1.1.0"
+ns.ADDON_VERSION = "1.1.1"
+
+if ns.IsSupportedBuild and not ns.IsSupportedBuild() then
+    local flavorId = ns.Flavor and ns.Flavor.id or "unknown"
+    local tocVersion = ns.Flavor and ns.Flavor.tocVersion or 0
+    print("|cffff3333[Disenqueue]|r Unsupported WoW flavor: " .. tostring(flavorId) .. " (TOC " .. tostring(tocVersion) .. ").")
+    return
+end
 
 -- Spell constants
 local DISENCHANT_SPELL_ID = 13262
@@ -56,6 +63,20 @@ local lastCastSucceeded = 0
 local equippedSnapshot = {}
 local failStrikes = {}
 local MAX_FAIL_STRIKES = 2
+local runtimeBlockReason = nil
+
+local function blockRuntime(reason)
+    runtimeBlockReason = reason or "Runtime is unavailable on this client."
+    ns.RuntimeBlockReason = runtimeBlockReason
+end
+
+local function isRuntimeReady()
+    if runtimeBlockReason then
+        ns.Chat(runtimeBlockReason, NOTIFY_WARNINGS)
+        return false
+    end
+    return true
+end
 
 -- ─── Callback System ─────────────────────────────────────────────────────────
 local callbacks = {}
@@ -98,36 +119,18 @@ function ns.AnchorTooltip(owner)
     end
 end
 
+-- Container APIs delegated to version-specific adapters (retail.lua / mop.lua)
 local function getContainerNumSlots(bag)
-    if C_Container and C_Container.GetContainerNumSlots then
-        return C_Container.GetContainerNumSlots(bag)
-    end
-    if GetContainerNumSlots then
-        return GetContainerNumSlots(bag)
-    end
-    return 0
+    return ns.APIAdapter.GetContainerNumSlots(bag)
 end
 
 local function getContainerItemLink(bag, slot)
-    if C_Container and C_Container.GetContainerItemLink then
-        return C_Container.GetContainerItemLink(bag, slot)
-    end
-    if GetContainerItemLink then
-        return GetContainerItemLink(bag, slot)
-    end
+    return ns.APIAdapter.GetContainerItemLink(bag, slot)
 end
 ns.GetContainerItemLink = getContainerItemLink
 
 local function getContainerItemCount(bag, slot)
-    if C_Container and C_Container.GetContainerItemInfo then
-        local info = C_Container.GetContainerItemInfo(bag, slot)
-        return info and info.stackCount or 0
-    end
-    if GetContainerItemInfo then
-        local _, count = GetContainerItemInfo(bag, slot)
-        return count or 0
-    end
-    return 0
+    return ns.APIAdapter.GetContainerItemCount(bag, slot)
 end
 
 local function parseItemID(itemLink)
@@ -195,97 +198,19 @@ end
 
 -- ─── Item Eligibility ────────────────────────────────────────────────────────
 
+-- Item binding check delegated to version-specific adapter
 local function isItemBound(bag, slot)
-    if C_Item and C_Item.IsBound then
-        local itemLocation = ItemLocation:CreateFromBagAndSlot(bag, slot)
-        if itemLocation and itemLocation:IsValid() then
-            return C_Item.IsBound(itemLocation)
-        end
-    end
-    if not _G.WDQ_ScanTip then
-        CreateFrame("GameTooltip", "WDQ_ScanTip", nil, "GameTooltipTemplate")
-    end
-    local tip = _G.WDQ_ScanTip
-    tip:SetOwner(WorldFrame, "ANCHOR_NONE")
-    tip:ClearLines()
-    tip:SetBagItem(bag, slot)
-    for i = 2, tip:NumLines() do
-        local text = _G["WDQ_ScanTipTextLeft" .. i]
-        if text then
-            local line = text:GetText()
-            if line == ITEM_SOULBOUND or line == ITEM_BNETACCOUNTBOUND or line == ITEM_ACCOUNTBOUND then
-                return true
-            end
-        end
-    end
-    return false
+    return ns.APIAdapter.IsItemBound(bag, slot)
 end
 
+-- Item refund check delegated to version-specific adapter
 local function isItemRefundable(bag, slot)
-    if not bag or not slot then return false end
-    if C_Item and C_Item.CanBeRefunded then
-        local itemLocation = ItemLocation:CreateFromBagAndSlot(bag, slot)
-        if itemLocation and itemLocation:IsValid() then
-            return C_Item.CanBeRefunded(itemLocation)
-        end
-    end
-    return false
+    return ns.APIAdapter.IsItemRefundable(bag, slot)
 end
 
+-- Disenchant restriction check delegated to version-specific adapter
 local function hasCannotDisenchantLine(bag, slot)
-    if not bag or not slot then return false end
-    if C_TooltipInfo and C_TooltipInfo.GetBagItem then
-        local data = C_TooltipInfo.GetBagItem(bag, slot)
-        if data and data.lines then
-            for _, line in ipairs(data.lines) do
-                if line.type and line.type == 41 and line.leftText
-                    and line.leftText:find("[Dd]isenchant") then
-                    return true
-                end
-                if line.leftText then
-                    local text = line.leftText
-                    if text == (_G.ITEM_DISENCHANT_NOT_DISENCHANTABLE or "")
-                        or text == (_G.ERR_CANT_BE_DISENCHANTED or "")
-                        or text == "Cannot be disenchanted"
-                        or text == "Item cannot be disenchanted" then
-                        return true
-                    end
-                    if line.leftColor and line.leftColor.r and line.leftColor.r > 0.9
-                        and line.leftColor.g < 0.2 and line.leftColor.b < 0.2 then
-                        if text:find("[Dd]isenchant") then
-                            return true
-                        end
-                    end
-                end
-            end
-        end
-        return false
-    end
-    if not _G.WDQ_ScanTip then
-        CreateFrame("GameTooltip", "WDQ_ScanTip", nil, "GameTooltipTemplate")
-    end
-    local tip = _G.WDQ_ScanTip
-    tip:SetOwner(WorldFrame, "ANCHOR_NONE")
-    tip:ClearLines()
-    tip:SetBagItem(bag, slot)
-    for i = 2, tip:NumLines() do
-        local textObj = _G["WDQ_ScanTipTextLeft" .. i]
-        if textObj then
-            local line = textObj:GetText()
-            if not line then break end
-            if line == (_G.ITEM_DISENCHANT_NOT_DISENCHANTABLE or "")
-                or line == (_G.ERR_CANT_BE_DISENCHANTED or "")
-                or line == "Cannot be disenchanted"
-                or line == "Item cannot be disenchanted" then
-                return true
-            end
-            local r, g, b = textObj:GetTextColor()
-            if r and r > 0.9 and g < 0.2 and b < 0.2 and line:find("[Dd]isenchant") then
-                return true
-            end
-        end
-    end
-    return false
+    return ns.APIAdapter.HasCannotDisenchantLine(bag, slot)
 end
 
 local function isDisenchantCandidate(itemLink, bag, slot)
@@ -402,6 +327,8 @@ local function clearQueue()
 end
 
 function ns.RebuildQueue()
+    if not isRuntimeReady() then return end
+
     clearQueue()
     wipe(failStrikes)
 
@@ -510,27 +437,10 @@ local function clearSecureBtn()
     secureBtn:SetAttribute("macrotext", "")
 end
 
+-- Spell readiness check delegated to version-specific adapter
 local function isSpellReady(spellName, mode)
-    if UnitCastingInfo("player") or UnitChannelInfo("player") then
-        return false
-    end
     local spellID = mode and SPELL_IDS[mode] or DISENCHANT_SPELL_ID
-    if C_Spell and C_Spell.IsSpellUsable then
-        local isUsable = C_Spell.IsSpellUsable(spellID)
-        if not isUsable then return false end
-    end
-    if C_Spell and C_Spell.GetSpellCooldown then
-        local cdInfo = C_Spell.GetSpellCooldown(spellID)
-        if cdInfo and cdInfo.startTime and cdInfo.startTime > 0 and cdInfo.duration > 0 then
-            return false
-        end
-    else
-        local start, duration = GetSpellCooldown(spellName)
-        if start and start > 0 and duration > 0 then
-            return false
-        end
-    end
-    return true
+    return ns.APIAdapter.IsSpellReady(spellID, spellName)
 end
 
 secureBtn:SetScript("PreClick", function(self)
@@ -671,6 +581,8 @@ ns.UnbindProcessKey = unbindProcessKey
 -- ─── Processing Control ──────────────────────────────────────────────────────
 
 function ns.StartProcessing()
+    if not isRuntimeReady() then return end
+
     if #queue == 0 then
         chat("Nothing in queue. Scan bags first.", NOTIFY_PROCESS)
         return
@@ -789,6 +701,11 @@ end
 local EXPORT_PREFIX = "!WDQ:1!"
 
 function ns.ExportLockedList()
+    if not (ns.HasCapability and ns.HasCapability("encodingUtil")) then
+        chat("Import/Export is not available on this client version.", NOTIFY_WARNINGS)
+        return nil
+    end
+
     local items = {}
     for itemID, entry in pairs(DisenqueueDB.protectedItemIDs) do
         local name = (type(entry) == "table" and entry.name) or tostring(itemID)
@@ -811,6 +728,10 @@ function ns.ExportLockedList()
 end
 
 function ns.ImportLockedList(inputStr)
+    if not (ns.HasCapability and ns.HasCapability("encodingUtil")) then
+        return false, "Import/Export is not available on this client version"
+    end
+
     local version, payload = inputStr:match("^!WDQ:(%d+)!(.+)$")
     if not version or not payload then
         return false, "Invalid format (missing !WDQ: prefix)"
@@ -1006,9 +927,24 @@ eventFrame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 eventFrame:SetScript("OnEvent", function(_, event, arg1, ...)
     if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
         ns.NormalizeDB()
+
+        local expectedAdapter = ns.GetExpectedAdapterFile and ns.GetExpectedAdapterFile() or nil
+        local adapterReady, adapterErr = true, nil
+        if ns.APIAdapter and ns.APIAdapter.Validate then
+            adapterReady, adapterErr = ns.APIAdapter.Validate(expectedAdapter)
+        end
+
+        if not adapterReady then
+            local flavorLabel = (ns.Flavor and ns.Flavor.id) or "unknown"
+            blockRuntime("Processing disabled: " .. tostring(adapterErr))
+            chat(("v%s loaded (%s) in safe mode."):format(ns.ADDON_VERSION, flavorLabel), NOTIFY_WARNINGS)
+            return
+        end
+
         ns.HookBagClicks()
         ns.FireCallback("ADDON_LOADED")
-        chat(("v%s loaded. Alt+Left-Click to queue."):format(ns.ADDON_VERSION))
+        local flavorLabel = (ns.Flavor and ns.Flavor.id) or "unknown"
+        chat(("v%s loaded (%s). Alt+Left-Click to queue."):format(ns.ADDON_VERSION, flavorLabel))
         return
     end
 

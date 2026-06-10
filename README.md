@@ -110,9 +110,24 @@ No. Disenqueue processes exactly one item per hardware input event, which is the
 
 ## Compatibility
 
-- **WoW Retail** — The War Within (Interface 120005)
+- **WoW Retail (Live)** - supported via `release` artifact (Interface 120005)
+- **WoW Retail (PTR/Beta)** - supported via `ptr` artifact (Interface 120007)
+- **WoW Classic (MoP)** - supported via `classic-mop` artifact (Interface 50500)
+- **WoW Classic (Era/Cata)** - flavor is detected but intentionally unsupported until dedicated adapters are added
+- **Capability-gated features** - optional features such as locked-list import/export are enabled only when the client provides required APIs
+- **Variant-safe packaging** - each build artifact ships exactly one adapter and a matching TOC entry
 - **Dependencies** — None. Fully standalone, no libraries required.
 - **Conflicts** — None known. Works alongside TSM, Enchantrix, and other inventory addons.
+
+---
+
+## Release Checklist
+
+1. Run the build script and confirm all three supported artifacts are generated (`release`, `ptr`, `classic-mop`).
+2. Confirm each artifact TOC has the correct `## Interface` value for its target client.
+3. Confirm each artifact TOC contains only the adapter line required by that artifact.
+4. Smoke test one queue cycle on Retail Live, Retail PTR, and Classic MoP.
+5. Verify unsupported Classic flavors fail gracefully with a clear in-game message rather than adapter errors.
 
 ---
 

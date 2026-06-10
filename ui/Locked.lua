@@ -1,7 +1,7 @@
 local _, ns = ...
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- UI_Locked.lua — Locked Items companion panel
+-- Locked.lua — Locked Items companion panel
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 local C = ns.C
@@ -271,13 +271,22 @@ local function createLockedPanel()
     local importBtn = Theme.CreateIconButton(titleBar, 26,
         "Interface\\AddOns\\Disenqueue\\icons\\download", C.success)
     importBtn:SetPoint("RIGHT", closeBtn, "LEFT", -4, 0)
+    local canShareLockedList = ns.HasCapability and ns.HasCapability("encodingUtil")
     importBtn:SetScript("OnClick", function()
+        if not canShareLockedList then
+            ns.Chat("Import/Export is not available on this client version.")
+            return
+        end
         ns.FireCallback("SHOW_IMPORT")
     end)
     importBtn:SetScript("OnEnter", function(self)
         ns.AnchorTooltip(self)
         GameTooltip:AddLine("Import Locked List")
-        GameTooltip:AddLine("Paste an exported string to add items", 0.7, 0.7, 0.7, true)
+        if canShareLockedList then
+            GameTooltip:AddLine("Paste an exported string to add items", 0.7, 0.7, 0.7, true)
+        else
+            GameTooltip:AddLine("Not available on this client version", C.warning.r, C.warning.g, C.warning.b, true)
+        end
         GameTooltip:Show()
     end)
     importBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -287,6 +296,10 @@ local function createLockedPanel()
         "Interface\\AddOns\\Disenqueue\\icons\\upload", C.violet)
     exportBtn:SetPoint("RIGHT", importBtn, "LEFT", -4, 0)
     exportBtn:SetScript("OnClick", function()
+        if not canShareLockedList then
+            ns.Chat("Import/Export is not available on this client version.")
+            return
+        end
         local exportStr, itemCount = ns.ExportLockedList()
         if exportStr then
             ns.FireCallback("SHOW_EXPORT", exportStr, itemCount)
@@ -295,10 +308,21 @@ local function createLockedPanel()
     exportBtn:SetScript("OnEnter", function(self)
         ns.AnchorTooltip(self)
         GameTooltip:AddLine("Export Locked List")
-        GameTooltip:AddLine("Copy a shareable string of your locked items", 0.7, 0.7, 0.7, true)
+        if canShareLockedList then
+            GameTooltip:AddLine("Copy a shareable string of your locked items", 0.7, 0.7, 0.7, true)
+        else
+            GameTooltip:AddLine("Not available on this client version", C.warning.r, C.warning.g, C.warning.b, true)
+        end
         GameTooltip:Show()
     end)
     exportBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    if not canShareLockedList then
+        importBtn:SetEnabled(false)
+        exportBtn:SetEnabled(false)
+        importBtn:SetAlpha(0.45)
+        exportBtn:SetAlpha(0.45)
+    end
 
     -- ═══ Section Headers ═══
     local contentTop = -(TITLE_BAR_HEIGHT)

@@ -1,4 +1,4 @@
-# build.ps1 - Creates dist/ with release and PTR zips ready for CurseForge
+# build.ps1 - Creates dist/ with release, PTR, and classic zips ready for CurseForge
 # Usage:
 #   ./build.ps1                 # build only
 #   ./build.ps1 -Bump patch    # 1.0.0 -> 1.0.1, then build
@@ -14,11 +14,53 @@ $ErrorActionPreference = "Stop"
 
 $root = Split-Path $PSScriptRoot -Parent
 $tocFile = Join-Path $root "Disenqueue.toc"
-$coreFile = Join-Path $root "Core.lua"
+$coreFile = Join-Path (Join-Path $root "core") "Core.lua"
 
 # Interface versions
 $INTERFACE_LIVE = "120005"
 $INTERFACE_PTR  = "120007"
+$INTERFACE_CLASSIC_MOP = "50500"
+# Placeholder values for disabled future flavors.
+$INTERFACE_CLASSIC_CATA = "40400"
+$INTERFACE_CLASSIC_ERA  = "11507"
+
+$VARIANTS = @(
+    [pscustomobject]@{
+        Name = "release"
+        InterfaceVersion = $INTERFACE_LIVE
+        Adapter = "retail.lua"
+        Enabled = $true
+        UploadLabel = "The War Within (live)"
+    },
+    [pscustomobject]@{
+        Name = "ptr"
+        InterfaceVersion = $INTERFACE_PTR
+        Adapter = "retail.lua"
+        Enabled = $true
+        UploadLabel = "PTR/Beta"
+    },
+    [pscustomobject]@{
+        Name = "classic-mop"
+        InterfaceVersion = $INTERFACE_CLASSIC_MOP
+        Adapter = "mop.lua"
+        Enabled = $true
+        UploadLabel = "Mists of Pandaria Classic"
+    },
+    [pscustomobject]@{
+        Name = "classic-cata"
+        InterfaceVersion = $INTERFACE_CLASSIC_CATA
+        Adapter = "mop.lua"
+        Enabled = $false
+        UploadLabel = "Future Classic Cata"
+    },
+    [pscustomobject]@{
+        Name = "classic-era"
+        InterfaceVersion = $INTERFACE_CLASSIC_ERA
+        Adapter = "mop.lua"
+        Enabled = $false
+        UploadLabel = "Future Classic Era"
+    }
+)
 
 # --- Version bump ---
 if ($Bump) {
@@ -72,24 +114,50 @@ if ($tocContent -match '## Version:\s*(\d+\.\d+\.\d+)') {
 
 # Build function: creates addon folder, patches interface version, zips it
 function Build-Variant {
-    param([string]$InterfaceVersion, [string]$Suffix)
+    param([pscustomobject]$Variant)
 
-    $variantDir = Join-Path $distDir $Suffix
+    if (-not $Variant.Enabled) {
+        Write-Host "  Skipping $($Variant.Name) (disabled)" -ForegroundColor DarkGray
+        return
+    }
+
+    if (-not $Variant.InterfaceVersion) {
+        throw "Variant '$($Variant.Name)' is missing InterfaceVersion"
+    }
+    if (-not $Variant.Adapter) {
+        throw "Variant '$($Variant.Name)' is missing Adapter"
+    }
+
+    $variantDir = Join-Path $distDir $Variant.Name
     $addonDir = Join-Path $variantDir "Disenqueue"
 
     New-Item -ItemType Directory -Path $addonDir -Force | Out-Null
 
-    # Copy addon files
+    # Copy addon root files
     Copy-Item (Join-Path $root "Disenqueue.toc") -Destination $addonDir
-    Copy-Item (Join-Path $root "Core.lua") -Destination $addonDir
-    Copy-Item (Join-Path $root "Theme.lua") -Destination $addonDir
-    Copy-Item (Join-Path $root "SlotMap.lua") -Destination $addonDir
-    Copy-Item (Join-Path $root "UI_Main.lua") -Destination $addonDir
-    Copy-Item (Join-Path $root "UI_Locked.lua") -Destination $addonDir
-    Copy-Item (Join-Path $root "UI_Export.lua") -Destination $addonDir
-    Copy-Item (Join-Path $root "UI_Minimap.lua") -Destination $addonDir
-    Copy-Item (Join-Path $root "Settings.lua") -Destination $addonDir
     Copy-Item (Join-Path $root "Bindings.xml") -Destination $addonDir
+
+    # Copy core module files
+    Copy-Item (Join-Path (Join-Path $root "core") "Compat.lua") -Destination $addonDir
+    Copy-Item (Join-Path (Join-Path $root "core") "Core.lua") -Destination $addonDir
+
+    # Copy lib module files
+    New-Item -ItemType Directory -Path (Join-Path $addonDir "lib") -Force | Out-Null
+    Copy-Item (Join-Path (Join-Path $root "lib") "Theme.lua") -Destination (Join-Path $addonDir "lib")
+    Copy-Item (Join-Path (Join-Path $root "lib") "APIAdapter.lua") -Destination (Join-Path $addonDir "lib")
+    Copy-Item (Join-Path (Join-Path $root "lib") "SlotMap.lua") -Destination (Join-Path $addonDir "lib")
+    Copy-Item (Join-Path (Join-Path $root "lib") "Settings.lua") -Destination (Join-Path $addonDir "lib")
+
+    # Copy ui module files
+    New-Item -ItemType Directory -Path (Join-Path $addonDir "ui") -Force | Out-Null
+    Copy-Item (Join-Path (Join-Path $root "ui") "Main.lua") -Destination (Join-Path $addonDir "ui")
+    Copy-Item (Join-Path (Join-Path $root "ui") "Locked.lua") -Destination (Join-Path $addonDir "ui")
+    Copy-Item (Join-Path (Join-Path $root "ui") "Export.lua") -Destination (Join-Path $addonDir "ui")
+    Copy-Item (Join-Path (Join-Path $root "ui") "Minimap.lua") -Destination (Join-Path $addonDir "ui")
+
+    # Copy version-specific adapter
+    New-Item -ItemType Directory -Path (Join-Path $addonDir "adapters") -Force | Out-Null
+    Copy-Item (Join-Path (Join-Path $root "adapters") $Variant.Adapter) -Destination (Join-Path $addonDir "adapters")
 
     # Copy asset directories
     Copy-Item (Join-Path $root "icons") -Destination $addonDir -Recurse
@@ -107,25 +175,32 @@ function Build-Variant {
     # Patch Interface version in the .toc copy
     $tocPath = Join-Path $addonDir "Disenqueue.toc"
     $content = Get-Content $tocPath -Raw
-    $content = $content -replace '## Interface:\s*\d+', "## Interface: $InterfaceVersion"
+    $content = $content -replace '## Interface:\s*\d+', "## Interface: $($Variant.InterfaceVersion)"
+
+    # Keep TOC adapter loading aligned with the adapter file packaged for this variant.
+    $content = $content -replace '(?m)^adapters/retail\.lua\s*\r?\n', ''
+    $content = $content -replace '(?m)^adapters/mop\.lua\s*\r?\n', ''
+    $content = $content -replace '(?m)^lib/APIAdapter\.lua\s*\r?\n', "lib/APIAdapter.lua`r`nadapters/$($Variant.Adapter)`r`n"
+
     Set-Content $tocPath $content -NoNewline
 
     # Create zip
-    $zipName = "Disenqueue-$version-$Suffix.zip"
+    $zipName = "Disenqueue-$version-$($Variant.Name).zip"
     $zipPath = Join-Path $distDir $zipName
     Compress-Archive -Path $addonDir -DestinationPath $zipPath -Force
 
-    Write-Host "  $zipName (Interface: $InterfaceVersion)" -ForegroundColor White
+    Write-Host "  $zipName (Interface: $($Variant.InterfaceVersion))" -ForegroundColor White
 }
 
 Write-Host ""
 Write-Host "Building Disenqueue v$version..." -ForegroundColor Cyan
 Write-Host ""
 
-# Build both variants
+# Build all variants
 Write-Host "Zips:" -ForegroundColor Green
-Build-Variant -InterfaceVersion $INTERFACE_LIVE -Suffix "release"
-Build-Variant -InterfaceVersion $INTERFACE_PTR  -Suffix "ptr"
+foreach ($variant in $VARIANTS) {
+    Build-Variant -Variant $variant
+}
 
 # Show contents of the release build
 $releaseAddonDir = Join-Path $distDir "release\Disenqueue"
@@ -137,5 +212,6 @@ Get-ChildItem $releaseAddonDir -Recurse | ForEach-Object {
 }
 Write-Host ""
 Write-Host "Ready to upload to CurseForge:" -ForegroundColor Green
-Write-Host "  dist/Disenqueue-$version-release.zip  -> The War Within (live)" -ForegroundColor White
-Write-Host "  dist/Disenqueue-$version-ptr.zip      -> PTR/Beta" -ForegroundColor White
+foreach ($variant in $VARIANTS | Where-Object { $_.Enabled }) {
+    Write-Host "  dist/Disenqueue-$version-$($variant.Name).zip -> $($variant.UploadLabel)" -ForegroundColor White
+}

@@ -1,7 +1,7 @@
 local _, ns = ...
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- UI_Export.lua — Export/Import modal with tabbed code block
+-- Export.lua — Export/Import modal with tabbed code block
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 local C = ns.C
@@ -262,6 +262,11 @@ end
 local function showExport(content, itemCount)
     if not modal then createExportModal() end
 
+    if not (ns.HasCapability and ns.HasCapability("encodingUtil")) then
+        ns.Chat("Import/Export is not available on this client version.")
+        return
+    end
+
     isImportMode = false
     currentContent = content or ""
     activeTab = 1
@@ -300,6 +305,11 @@ end
 local function showImport()
     if not modal then createExportModal() end
 
+    if not (ns.HasCapability and ns.HasCapability("encodingUtil")) then
+        ns.Chat("Import/Export is not available on this client version.")
+        return
+    end
+
     isImportMode = true
     currentContent = ""
     activeTab = 1
@@ -316,15 +326,15 @@ local function showImport()
     modal._actionBtn:SetScript("OnClick", function()
         local text = modal._codeBlock:GetText()
         if text and text ~= "" then
-            local count = ns.ImportLockedList(text)
-            if count and count > 0 then
-                modal._statusLabel:SetText(count .. " items imported!")
+            local ok, message = ns.ImportLockedList(text)
+            if ok then
+                modal._statusLabel:SetText(message or "Import complete")
                 modal._codeBlock:SetText("")
                 C_Timer.After(2, function()
                     if modal then modal:Hide() end
                 end)
             else
-                modal._statusLabel:SetText("Invalid format")
+                modal._statusLabel:SetText(message or "Invalid format")
                 modal._statusLabel:SetTextColor(C.danger.r, C.danger.g, C.danger.b)
                 C_Timer.After(2, function()
                     if modal and modal._statusLabel then

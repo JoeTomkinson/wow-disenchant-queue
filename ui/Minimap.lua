@@ -1,7 +1,7 @@
 local _, ns = ...
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- UI_Minimap.lua — Minimap button (no library dependency)
+-- Minimap.lua — Minimap button (no library dependency)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 local function createMinimapButton()

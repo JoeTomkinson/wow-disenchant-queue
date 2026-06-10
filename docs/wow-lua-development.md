@@ -9,18 +9,16 @@ This document is mainly so I can keep track of relevant resources and things I'v
 
 ## Interface Version History & Release Notes
 
-| Expansion             | Interface | TOC Value | API Changes                                            |
-| --------------------- | --------- | --------- | ------------------------------------------------------ |
-| Midnight (12.0)       | 12.0.0    | `120005`  | https://warcraft.wiki.gg/wiki/Patch_12.0.0/API_changes |
-| The War Within (11.1) | 11.1.0    | `110100`  | https://warcraft.wiki.gg/wiki/Patch_11.1.0/API_changes |
-| The War Within (11.0) | 11.0.2    | `110002`  | https://warcraft.wiki.gg/wiki/Patch_11.0.2/API_changes |
-| Dragonflight (10.0)   | 10.0.0    | `100000`  | https://warcraft.wiki.gg/wiki/Patch_10.0.0/API_changes |
+- Midnight (12.0), Interface `120005`: [Patch 12.0.0 API changes](https://warcraft.wiki.gg/wiki/Patch_12.0.0/API_changes)
+- The War Within (11.1), Interface `110100`: [Patch 11.1.0 API changes](https://warcraft.wiki.gg/wiki/Patch_11.1.0/API_changes)
+- The War Within (11.0), Interface `110002`: [Patch 11.0.2 API changes](https://warcraft.wiki.gg/wiki/Patch_11.0.2/API_changes)
+- Dragonflight (10.0), Interface `100000`: [Patch 10.0.0 API changes](https://warcraft.wiki.gg/wiki/Patch_10.0.0/API_changes)
 
-**Official patch notes:** https://worldofwarcraft.blizzard.com/en-us/news
+**Official patch notes:** [World of Warcraft News](https://worldofwarcraft.blizzard.com/en-us/news)
 
-**Full API reference:** https://warcraft.wiki.gg/wiki/World_of_Warcraft_API
+**Full API reference:** [World of Warcraft API](https://warcraft.wiki.gg/wiki/World_of_Warcraft_API)
 
-**FrameXML source (live):** https://github.com/Gethe/wow-ui-source/tree/live
+**FrameXML source (live):** [Gethe wow-ui-source (live)](https://github.com/Gethe/wow-ui-source/tree/live)
 
 ---
 
@@ -258,7 +256,38 @@ local _, _, _, _, _, _, _, _, _, _, _, classID, subClassID = GetItemInfo(itemLin
 | ------- | ---------- | --------------------- |
 | 7       | 7          | Ore (for Prospecting) |
 | 7       | 9          | Herb (for Milling)    |
-| 3       | 11         | Artifact Relic        |
+
+---
+
+## Multi-Flavor Addon Strategy
+
+Disenqueue now targets multiple WoW client families from one shared codebase.
+
+- Retail Live package: `release` artifact
+- Retail PTR/Beta package: `ptr` artifact
+- Classic MoP package: `classic-mop` artifact
+- Classic Era/Cata: detected but intentionally unsupported until dedicated adapters are added
+- Build artifacts package one adapter only, and TOC adapter lines are rewritten per variant
+
+### Compatibility Layer Rules
+
+1. Detect flavor and API capability once at startup in `Compat.lua`.
+2. Keep core queue logic flavor-agnostic; route API differences through capability checks and wrappers.
+3. Treat optional features as capability-gated. If a client lacks required APIs, disable UI entry points and show a clear user message instead of erroring.
+4. Prefer a data-driven capability map over scattered flavor conditionals.
+
+### Current Capability Gates
+
+- `modernSettingsAPI`: guards Settings panel registration.
+- `encodingUtil`: guards locked list import/export feature.
+- `tooltipInfo`, `cSpellNamespace`, `cContainerNamespace`, `itemLocationAPI`: available for future wrapper normalization.
+
+### Release Checklist
+
+1. Run `scripts/build.ps1` and confirm `release`, `ptr`, and `classic-mop` artifacts were produced.
+2. Inspect each generated TOC and verify both interface value and adapter line are variant-correct.
+3. Smoke test one queue process cycle per supported flavor target.
+4. Confirm unsupported Classic flavors show a safe, explicit unsupported message without adapter errors.
 
 ---
 
@@ -383,12 +412,12 @@ ag:Stop()
 
 ## Useful Resources
 
-- **WoW API Wiki:** https://warcraft.wiki.gg/wiki/World_of_Warcraft_API
-- **Settings API:** https://warcraft.wiki.gg/wiki/Settings_API
-- **TOC Format:** https://warcraft.wiki.gg/wiki/TOC_format
-- **Menu Implementation Guide:** https://warcraft.wiki.gg/wiki/Blizzard_Menu_implementation_guide
-- **FrameXML Source:** https://github.com/Gethe/wow-ui-source
-- **Townlong Yak (live FrameXML):** https://www.townlong-yak.com/framexml/live
-- **Addon Categories (11.1+):** https://warcraft.wiki.gg/wiki/Addon_Categories
-- **WoW Dev Discord:** https://discord.gg/wowuidev
-- **Live AddOns Source:** https://github.com/Gethe/wow-ui-source/tree/live/Interface/AddOns
+- [WoW API Wiki](https://warcraft.wiki.gg/wiki/World_of_Warcraft_API)
+- [Settings API](https://warcraft.wiki.gg/wiki/Settings_API)
+- [TOC Format](https://warcraft.wiki.gg/wiki/TOC_format)
+- [Menu Implementation Guide](https://warcraft.wiki.gg/wiki/Blizzard_Menu_implementation_guide)
+- [FrameXML Source](https://github.com/Gethe/wow-ui-source)
+- [Townlong Yak (live FrameXML)](https://www.townlong-yak.com/framexml/live)
+- [Addon Categories (11.1+)](https://warcraft.wiki.gg/wiki/Addon_Categories)
+- [WoW Dev Discord](https://discord.gg/wowuidev)
+- [Live AddOns Source](https://github.com/Gethe/wow-ui-source/tree/live/Interface/AddOns)

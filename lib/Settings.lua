@@ -17,6 +17,11 @@ local PROCESS_KEY_OPTIONS = {
 }
 
 local function registerSettings()
+    if not (ns.HasCapability and ns.HasCapability("modernSettingsAPI")) then
+        ns.Chat("Settings panel is unavailable on this client version.")
+        return
+    end
+
     local category, layout = Settings.RegisterVerticalLayoutCategory("Disenqueue")
     _G.WDQ_SettingsCategory = category
 
