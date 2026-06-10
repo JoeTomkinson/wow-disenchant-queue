@@ -1,8 +1,8 @@
 # Disenqueue
 
-A lightweight disenchant queue that processes **one item per hardware input** — fully compliant with Blizzard's one-action-per-keypress rules. Scan your bags, bind a key (or your scroll wheel), and shred through items safely and efficiently.
+A lightweight disenchant queue that processes **one item per hardware input** - fully compliant with Blizzard's one-action-per-keypress rules. Scan your bags, bind a key (or your scroll wheel), and shred through items safely and efficiently.
 
-Also supports the **Lesser Professions**™ — Prospecting and Milling — for those of us who recognise that Enchanting is the one true craft and everything else is just breaking rocks and grinding weeds.
+Also supports the **Lesser Professions**™ - Prospecting and Milling - for those of us who recognise that Enchanting is the one true craft and everything else is just breaking rocks and grinding weeds.
 
 <img width="1024" height="1024" alt="Disenqueue" src="https://github.com/user-attachments/assets/dbcaf466-e64d-4364-9ad5-a6140991d7bc" />
 
@@ -10,22 +10,22 @@ Also supports the **Lesser Professions**™ — Prospecting and Milling — for 
 
 ## Features
 
-- **One action per input** — processes exactly one queued item per key/wheel press, staying within Blizzard's hardware input rules at all times
-- **Smart bag scanning** — automatically detects disenchantable gear in your bags based on configurable quality filters
-- **Scroll wheel workflow** — bind Mouse Wheel Up/Down and scroll through your disenchant pile in seconds
-- **Alt+Click bag integration** — Alt+Click items in your bags to toggle queue membership directly
-- **Item locking** — permanently protect valuable items so they never enter the queue, with manual lock and auto-lock support
-- **Auto-protection** — items that fail disenchant twice are automatically locked to prevent repeated attempts
-- **Import/Export locked lists** — share your protected item lists between characters or with friends via compact encoded strings
-- **Lesser Professions** — optionally queue Prospecting (ore stacks of 5+) and Milling (herb stacks of 5+) alongside disenchants
-- **Soulbound filter** — optionally restrict scanning to soulbound items only, keeping tradeable/AH-sellable gear safe
-- **Dust estimation** — quality-based gold value estimates displayed in the queue header
-- **Progress tracking** — live count, ETA, and percentage bar during processing
-- **Resizable queue window** — drag grip to resize (4–16 visible rows) with snap-to-row and position persistence
-- **Minimap button** — click to toggle the queue window; draggable with angle persistence, optional hide via settings
-- **Customisable notifications** — toggle chat messages for scanning, processing, warnings, and queue changes independently
-- **Custom themed UI** — dark-violet design with animated chrome, cast bar, quality-bordered icons, and companion locked items panel
-- **Zero combat footprint** — does nothing during combat; fully unloads keybinds when not processing
+- **One action per input** - processes exactly one queued item per key/wheel press, staying within Blizzard's hardware input rules at all times
+- **Smart bag scanning** - automatically detects disenchantable gear in your bags based on configurable quality filters
+- **Scroll wheel workflow** - bind Mouse Wheel Up/Down and scroll through your disenchant pile in seconds
+- **Alt+Click bag integration** - Alt+Click items in your bags to toggle queue membership directly
+- **Item locking** - permanently protect valuable items so they never enter the queue, with manual lock and auto-lock support
+- **Auto-protection** - items that fail disenchant twice are automatically locked to prevent repeated attempts
+- **Import/Export locked lists** - share your protected item lists between characters or with friends via compact encoded strings
+- **Lesser Professions** - optionally queue Prospecting (ore stacks of 5+) and Milling (herb stacks of 5+) alongside disenchants
+- **Soulbound filter** - optionally restrict scanning to soulbound items only, keeping tradeable/AH-sellable gear safe
+- **Dust estimation** - quality-based gold value estimates displayed in the queue header
+- **Progress tracking** - live count, ETA, and percentage bar during processing
+- **Resizable queue window** - drag grip to resize (4–16 visible rows) with snap-to-row and position persistence
+- **Minimap button** - click to toggle the queue window; draggable with angle persistence, optional hide via settings
+- **Customisable notifications** - toggle chat messages for scanning, processing, warnings, and queue changes independently
+- **Custom themed UI** - dark-violet design with animated chrome, cast bar, quality-bordered icons, and companion locked items panel
+- **Zero combat footprint** - does nothing during combat; fully unloads keybinds when not processing
 
 ---
 
@@ -64,10 +64,10 @@ Access via **Settings → AddOns → Disenqueue** or the gear icon in the UI hea
 
 **General**
 
-- Process Key — Scroll Wheel, Enter, Space, F, E, or R
-- Minimum/Maximum Quality — filter which item rarities get queued (Poor through Epic)
-- Soulbound Only — only queue soulbound gear
-- Minimap Button — show/hide the minimap toggle button
+- Process Key - Scroll Wheel, Enter, Space, F, E, or R
+- Minimum/Maximum Quality - filter which item rarities get queued (Poor through Epic)
+- Soulbound Only - only queue soulbound gear
+- Minimap Button - show/hide the minimap toggle button
 
 **Notifications**
 
@@ -76,8 +76,8 @@ Access via **Settings → AddOns → Disenqueue** or the gear icon in the UI hea
 **Lesser Professions** *(subcategory)*
 
 - Master toggle to enable/disable
-- Prospecting — queue ore stacks (requires Jewelcrafting)
-- Milling — queue herb stacks (requires Inscription)
+- Prospecting - queue ore stacks (requires Jewelcrafting)
+- Milling - queue herb stacks (requires Inscription)
 
 ---
 
@@ -85,8 +85,8 @@ Access via **Settings → AddOns → Disenqueue** or the gear icon in the UI hea
 
 When enabled, Scan Bags also queues:
 
-- **Prospecting** — ore stacks of 5+ (Jewelcrafting)
-- **Milling** — herb stacks of 5+ (Inscription)
+- **Prospecting** - ore stacks of 5+ (Jewelcrafting)
+- **Milling** - herb stacks of 5+ (Inscription)
 
 Items are grouped by mode in the queue (disenchants first, then prospect, then mill) and the correct spell is cast automatically. Stack-based items keep processing until the stack drops below 5.
 
@@ -110,14 +110,9 @@ No. Disenqueue processes exactly one item per hardware input event, which is the
 
 ## Compatibility
 
-- **WoW Retail (Live)** - supported via `release` artifact (Interface 120005)
-- **WoW Retail (PTR/Beta)** - supported via `ptr` artifact (Interface 120007)
-- **WoW Classic (MoP)** - supported via `classic-mop` artifact (Interface 50500)
-- **WoW Classic (Era/Cata)** - flavor is detected but intentionally unsupported until dedicated adapters are added
-- **Capability-gated features** - optional features such as locked-list import/export are enabled only when the client provides required APIs
-- **Variant-safe packaging** - each build artifact ships exactly one adapter and a matching TOC entry
-- **Dependencies** — None. Fully standalone, no libraries required.
-- **Conflicts** — None known. Works alongside TSM, Enchantrix, and other inventory addons.
+- **WoW Retail** - The War Within (Interface 120005)
+- **Dependencies** - None. Fully standalone, no libraries required.
+- **Conflicts** - None known. Works alongside TSM, Enchantrix, and other inventory addons.
 
 ---
 
