@@ -4,6 +4,28 @@ local _, ns = ...
 -- Minimap.lua — Minimap button (no library dependency)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
+local function safeAtan2(y, x)
+    if math.atan2 then
+        return math.atan2(y, x)
+    end
+
+    if x == 0 then
+        if y > 0 then return math.pi / 2 end
+        if y < 0 then return -math.pi / 2 end
+        return 0
+    end
+
+    local angle = math.atan(y / x)
+    if x < 0 then
+        if y >= 0 then
+            angle = angle + math.pi
+        else
+            angle = angle - math.pi
+        end
+    end
+    return angle
+end
+
 local function createMinimapButton()
     -- Named globally so button-collector addons (e.g. EnhancedQoL Button Sink) can discover it
     local minimapBtn = CreateFrame("Button", "WDQ_MinimapButton", Minimap)
@@ -47,7 +69,7 @@ local function createMinimapButton()
             local cx, cy = GetCursorPosition()
             local scale = UIParent:GetEffectiveScale()
             cx, cy = cx / scale, cy / scale
-            angle = math.deg(math.atan2(cy - my, cx - mx))
+            angle = math.deg(safeAtan2(cy - my, cx - mx))
             DisenqueueDB.minimapAngle = angle
             updatePosition()
         end)

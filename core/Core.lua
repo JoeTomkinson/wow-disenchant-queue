@@ -4,7 +4,7 @@ local ADDON_NAME, ns = ...
 -- Core.lua — Data model, queue logic, secure action, event handling, slash commands
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-ns.ADDON_VERSION = "1.1.1"
+ns.ADDON_VERSION = "1.1.2"
 
 if ns.IsSupportedBuild and not ns.IsSupportedBuild() then
     local flavorId = ns.Flavor and ns.Flavor.id or "unknown"
@@ -44,6 +44,35 @@ local SPELL_IDS = {
     [MODE_PROSPECT] = PROSPECTING_SPELL_ID,
     [MODE_MILL] = MILLING_SPELL_ID,
 }
+
+local C_Spell = _G.C_Spell
+
+local function getSpellNameByID(spellID)
+    if not spellID then return nil end
+    if C_Spell and C_Spell.GetSpellName then
+        local name = C_Spell.GetSpellName(spellID)
+        if name and name ~= "" then
+            return name
+        end
+    end
+    if GetSpellInfo then
+        local name = GetSpellInfo(spellID)
+        if name and name ~= "" then
+            return name
+        end
+    end
+    return nil
+end
+
+local function getSpellNameForMode(mode)
+    local currentMode = mode or MODE_DISENCHANT
+    local spellID = SPELL_IDS[currentMode] or SPELL_IDS[MODE_DISENCHANT]
+    local resolved = getSpellNameByID(spellID)
+    if resolved then
+        return resolved
+    end
+    return SPELL_NAMES[currentMode] or SPELL_NAMES[MODE_DISENCHANT]
+end
 
 -- Notification categories
 local NOTIFY_SCAN = "notifyScan"
@@ -483,7 +512,12 @@ secureBtn:SetScript("PreClick", function(self)
         clearSecureBtn()
         return
     end
-    local spellName = SPELL_NAMES[nextItem.mode] or SPELL_NAMES[MODE_DISENCHANT]
+    local spellName = getSpellNameForMode(nextItem.mode)
+    if not spellName or spellName == "" then
+        clearSecureBtn()
+        chat("Unable to resolve spell name for this mode on your client locale.", NOTIFY_WARNINGS)
+        return
+    end
     if not isSpellReady(spellName, nextItem.mode) then
         clearSecureBtn()
         return
@@ -550,7 +584,12 @@ function ns.UpdateSecureButton()
         ns.UpdateSecureButton()
         return
     end
-    local spellName = SPELL_NAMES[nextItem.mode] or SPELL_NAMES[MODE_DISENCHANT]
+    local spellName = getSpellNameForMode(nextItem.mode)
+    if not spellName or spellName == "" then
+        clearSecureBtn()
+        chat("Unable to resolve spell name for this mode on your client locale.", NOTIFY_WARNINGS)
+        return
+    end
     local macro = ("/cast %s\n/use %d %d"):format(spellName, nextItem.bag, nextItem.slot)
     secureBtn:SetAttribute("macrotext", macro)
 end
@@ -601,7 +640,7 @@ function ns.StartProcessing()
             checked[mode] = true
             local spellID = SPELL_IDS[mode]
             if spellID and not IsPlayerSpell(spellID) then
-                missingModes[#missingModes + 1] = SPELL_NAMES[mode] or mode
+                missingModes[#missingModes + 1] = getSpellNameForMode(mode) or mode
             end
         end
     end
@@ -900,14 +939,10 @@ local function isTrackedSpell(spellID)
     if spellID == PROSPECTING_SPELL_ID then return true end
     if spellID == MILLING_SPELL_ID then return true end
     if not ns.isProcessing then return false end
-    local name
-    if C_Spell and C_Spell.GetSpellName then
-        name = C_Spell.GetSpellName(spellID)
-    elseif GetSpellInfo then
-        name = GetSpellInfo(spellID)
-    end
+    local name = getSpellNameByID(spellID)
     if not name then return false end
-    for _, tracked in pairs(SPELL_NAMES) do
+    for modeKey in pairs(SPELL_NAMES) do
+        local tracked = getSpellNameForMode(modeKey)
         if name == tracked then return true end
     end
     return false

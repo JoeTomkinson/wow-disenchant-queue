@@ -4,10 +4,16 @@
 #   ./build.ps1 -Bump patch    # 1.0.0 -> 1.0.1, then build
 #   ./build.ps1 -Bump minor    # 1.0.0 -> 1.1.0, then build
 #   ./build.ps1 -Bump major    # 1.0.0 -> 2.0.0, then build
+#   ./build.ps1 -Variant classic-mop           # build only classic-mop
+#   ./build.ps1 -Variant classic-mop -Bump patch # bump version, then build only classic-mop
 
 param(
     [ValidateSet("major", "minor", "patch")]
-    [string]$Bump
+    [string]$Bump,
+
+    [Alias("Variant")]
+    [ValidateSet("release", "ptr", "classic-mop", "classic-cata", "classic-era")]
+    [string]$TargetVariant
 )
 
 $ErrorActionPreference = "Stop"
@@ -61,6 +67,20 @@ $VARIANTS = @(
         UploadLabel = "Future Classic Era"
     }
 )
+
+$variantsToBuild = if ($TargetVariant) {
+    @($VARIANTS | Where-Object { $_.Name -eq $TargetVariant })
+} else {
+    @($VARIANTS)
+}
+
+if (-not $variantsToBuild -or $variantsToBuild.Count -eq 0) {
+    throw "Unknown variant '$TargetVariant'."
+}
+
+if ($TargetVariant -and -not $variantsToBuild[0].Enabled) {
+    Write-Host "WARNING: '$TargetVariant' is currently disabled and will be skipped." -ForegroundColor Yellow
+}
 
 # --- Version bump ---
 if ($Bump) {
@@ -138,8 +158,9 @@ function Build-Variant {
     Copy-Item (Join-Path $root "Bindings.xml") -Destination $addonDir
 
     # Copy core module files
-    Copy-Item (Join-Path (Join-Path $root "core") "Compat.lua") -Destination $addonDir
-    Copy-Item (Join-Path (Join-Path $root "core") "Core.lua") -Destination $addonDir
+    New-Item -ItemType Directory -Path (Join-Path $addonDir "core") -Force | Out-Null
+    Copy-Item (Join-Path (Join-Path $root "core") "Compat.lua") -Destination (Join-Path $addonDir "core")
+    Copy-Item (Join-Path (Join-Path $root "core") "Core.lua") -Destination (Join-Path $addonDir "core")
 
     # Copy lib module files
     New-Item -ItemType Directory -Path (Join-Path $addonDir "lib") -Force | Out-Null
@@ -198,20 +219,27 @@ Write-Host ""
 
 # Build all variants
 Write-Host "Zips:" -ForegroundColor Green
-foreach ($variant in $VARIANTS) {
+foreach ($variant in $variantsToBuild) {
     Build-Variant -Variant $variant
 }
 
-# Show contents of the release build
-$releaseAddonDir = Join-Path $distDir "release\Disenqueue"
+$builtEnabledVariants = @($variantsToBuild | Where-Object { $_.Enabled })
+
 Write-Host ""
 Write-Host "Contents:" -ForegroundColor Green
-Get-ChildItem $releaseAddonDir -Recurse | ForEach-Object {
-    $rel = $_.FullName.Substring($releaseAddonDir.Length + 1)
-    if ($_.PSIsContainer) { Write-Host "  $rel/" } else { Write-Host "  $rel" }
+if ($builtEnabledVariants.Count -gt 0) {
+    $previewVariant = $builtEnabledVariants[0].Name
+    $previewAddonDir = Join-Path $distDir "$previewVariant\Disenqueue"
+    Get-ChildItem $previewAddonDir -Recurse | ForEach-Object {
+        $rel = $_.FullName.Substring($previewAddonDir.Length + 1)
+        if ($_.PSIsContainer) { Write-Host "  $rel/" } else { Write-Host "  $rel" }
+    }
+} else {
+    Write-Host "  (no enabled variants built)" -ForegroundColor DarkGray
 }
+
 Write-Host ""
 Write-Host "Ready to upload to CurseForge:" -ForegroundColor Green
-foreach ($variant in $VARIANTS | Where-Object { $_.Enabled }) {
+foreach ($variant in $builtEnabledVariants) {
     Write-Host "  dist/Disenqueue-$version-$($variant.Name).zip -> $($variant.UploadLabel)" -ForegroundColor White
 }
